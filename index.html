@@ -5,70 +5,41 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity Web Player | My project</title>
 
-    <!-- Scripts de A-Frame y MindAR para el modo AR -->
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar-image-aframe.prod.js"></script>
-
     <style>
+      /* Botón AR flotante; por defecto oculto, se mostrará solo si se detecta cámara */
       #ar-button {
         display: none;
         position: fixed;
         bottom: 20px;
         right: 20px;
-        z-index: 100;
+        z-index: 1000;
         background: #00bfff;
-        color: white;
+        color: #fff;
         font-weight: bold;
         border: none;
-        border-radius: 10px;
-        padding: 12px 20px;
-        font-size: 1.1em;
-        cursor: pointer;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-        transition: background 0.3s;
-      }
-
-      #ar-button:hover {
-        background: #0090cc;
-      }
-
-      #ar-container {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: black;
-        z-index: 999;
-      }
-
-      #close-ar {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        background: red;
-        color: white;
-        border: none;
         border-radius: 8px;
-        padding: 8px 12px;
-        font-size: 1em;
+        padding: 10px 14px;
+        font-size: 1rem;
         cursor: pointer;
-        z-index: 1000;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.25);
       }
+      #ar-button:hover { background: #0090cc; }
     </style>
   </head>
 
-  <body style="text-align: center; padding: 0; border: 0; margin: 0; background: #231F20;">
-    <!-- Escena de Unity intacta -->
-    <canvas id="unity-canvas" width="960" height="600" tabindex="-1"
+  <body style="text-align: center; padding: 0; border: 0; margin: 0;">
+    <!-- ********* PARTE ORIGINAL DE UNITY: NO MODIFICAR (se dejó intacta) ********* -->
+    <canvas id="unity-canvas" width=960 height=600 tabindex="-1"
       style="width: 960px; height: 600px; background: #231F20"></canvas>
 
     <script src="Build/ProyWeb.loader.js"></script>
     <script>
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        var meta = document.createElement("meta");
-        meta.name = "viewport";
-        meta.content =
-          "width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes";
-        document.getElementsByTagName("head")[0].appendChild(meta);
+        // Mobile: ajustar viewport y canvas
+        var meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+        document.getElementsByTagName('head')[0].appendChild(meta);
 
         var canvas = document.querySelector("#unity-canvas");
         canvas.style.width = "100%";
@@ -87,73 +58,37 @@
         companyName: "DefaultCompany",
         productName: "My project",
         productVersion: "0.1.0",
-      })
-        .then((unityInstance) => {
-          console.log("Unity loaded");
-        })
-        .catch((message) => {
-          alert(message);
-        });
+        // matchWebGLToCanvasSize: false,
+        // devicePixelRatio: 1,
+      }).then((unityInstance) => {
+        // Unity listo
+      }).catch((message) => {
+        alert(message);
+      });
     </script>
+    <!-- ********* FIN PARTE ORIGINAL DE UNITY ********* -->
 
-    <!-- Botón para activar AR -->
-    <button id="ar-button">🎯 Activar modo AR</button>
-
-    <!-- Contenedor del modo AR -->
-    <div id="ar-container">
-      <button id="close-ar">✖ Cerrar AR</button>
-      <a-scene
-        mindar-image="imageTargetSrc: ./targets.mind;"
-        color-space="sRGB"
-        renderer="colorManagement: true;"
-        vr-mode-ui="enabled: false"
-        device-orientation-permission-ui="enabled: false"
-      >
-        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
-        <a-entity mindar-image-target="targetIndex: 0">
-          <iframe
-            src="./index.html"
-            width="960"
-            height="600"
-            style="border:none; transform: scale(0.01) translate(-300, 0);"
-          ></iframe>
-        </a-entity>
-      </a-scene>
-    </div>
+    <!-- Botón que abre la página AR (solo se muestra si hay cámara) -->
+    <button id="ar-button" onclick="window.location.href = './ar.html'">🎯 Activar AR</button>
 
     <script>
-      const arButton = document.getElementById("ar-button");
-      const arContainer = document.getElementById("ar-container");
-      const closeAR = document.getElementById("close-ar");
-
-      // Detectar si el dispositivo tiene cámara (entonces mostrar el botón)
-      navigator.mediaDevices
-        .enumerateDevices()
-        .then((devices) => {
-          const hasCamera = devices.some(
-            (device) => device.kind === "videoinput"
-          );
-          if (hasCamera) arButton.style.display = "block";
-        })
-        .catch((e) => console.log("No se pudo detectar cámara:", e));
-
-      // Abrir AR
-      arButton.addEventListener("click", async () => {
+      // Mostrar el botón solo si el dispositivo tiene al menos una cámara disponible
+      (async function showARButtonIfCamera() {
         try {
-          await navigator.mediaDevices.getUserMedia({ video: true });
-          arContainer.style.display = "block";
-          arButton.style.display = "none";
+          if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+            // API no soportada: no mostrar botón
+            return;
+          }
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const hasCamera = devices.some(d => d.kind === 'videoinput');
+          if (hasCamera) {
+            document.getElementById('ar-button').style.display = 'block';
+          }
         } catch (e) {
-          alert("Tu dispositivo no permite acceso a la cámara o no es compatible con AR.");
+          // Si hay cualquier error, no mostramos el botón
+          console.warn('No se pudo verificar cámaras:', e);
         }
-      });
-
-      // Cerrar AR
-      closeAR.addEventListener("click", () => {
-        arContainer.style.display = "none";
-        arButton.style.display = "block";
-      });
+      })();
     </script>
   </body>
 </html>
