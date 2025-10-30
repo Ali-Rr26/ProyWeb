@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AR View | My project</title>
+
+    <!-- A-Frame + MindAR (versión A-Frame) -->
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar-image-aframe.prod.js"></script>
+
+    <style>
+      html, body { margin:0; height:100%; background: black; }
+      #ar-root { width:100%; height:100%; position:fixed; inset:0; }
+      /* Ajustes para el iframe que carga la escena Unity */
+      .unity-iframe {
+        width: 960px; height: 600px;
+        max-width: 85vw; max-height: 60vh;
+        border: none; background: transparent;
+        transform-origin: 0 0;
+      }
+      /* Botón cerrar */
+      #close {
+        position: absolute; top: 12px; right: 12px;
+        z-index: 9999; background: rgba(255,255,255,0.9);
+        border: none; padding:8px 12px; border-radius:6px;
+        font-weight: bold; cursor: pointer;
+      }
+      /* Mensaje si no hay cámara */
+      #nocam { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:white; font-size:1.1rem; padding:20px; text-align:center; }
+    </style>
+  </head>
+
+  <body>
+    <div id="ar-root">
+      <button id="close" onclick="window.history.back();">✖ Cerrar AR</button>
+
+      <!-- Mensaje por si falla la cámara -->
+      <div id="nocam" style="display:none;">No se detectó cámara o no se concedieron permisos. AR no puede iniciarse.</div>
+
+      <!-- MindAR A-Frame scene -->
+      <a-scene
+        mindar-image="imageTargetSrc: ./targets.mind; uiEnabled: false;"
+        embedded
+        color-space="sRGB"
+        renderer="colorManagement: true;"
+        vr-mode-ui="enabled: false"
+        device-orientation-permission-ui="enabled: false"
+        style="width:100%; height:100%;"
+      >
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+        <!-- En el target insertamos un iframe que carga tu escena Unity (index.html) -->
+        <a-entity mindar-image-target="targetIndex: 0">
+          <a-entity
+            geometry="primitive: plane; width: 1; height: 0.6;"
+            material="shader: flat; transparent: true; src: #unityIframe;"
+            position="0 0 0"
+            scale="1 1 1"
+          ></a-entity>
+        </a-entity>
+
+        <!-- Hidden DOM iframe as texture source (A-Frame will not directly turn iframe into texture in all browsers;
+             using iframe inside A-Frame via DOM overlay approach below ensures compatibility) -->
+      </a-scene>
+
+      <!-- Fallback: colocamos un iframe sobre la escena AR en la posición absoluta
+           y lo hacemos visible solo cuando target esté detectado vía JS. -->
+      <iframe id="unityFrame" class="unity-iframe" src="./index.html" style="position:absolute; left:50%; top:50%; transform: translate(-50%, -50%) scale(0.8); display:none;"></iframe>
+    </div>
+
+    <script>
+      // 1) Verificar permiso/cámara antes de iniciar ROI
+      async function startAR() {
+        try {
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            document.getElementById('nocam').style.display = 'block';
+            return false;
+          }
+          await navigator.mediaDevices.getUserMedia({ video: true });
+          return true;
+        } catch (e) {
+          console.warn('Permiso cámara denegado o no disponible', e);
+          document.getElementById('nocam').style.display = 'block';
+          return false;
+        }
+      }
+
+      // 2) Inicializamos AR y hacemos visible el iframe cuando el target se detecta
+      (async () => {
+        const ok = await startAR();
+        if (!ok) return;
+
+        // Iniciar MindAR dentro del a-scene: A-Frame inicializa automáticamente cuando la página carga.
+        // Escuchar eventos de MindAR para saber cuándo aparece el target y mostrar el iframe.
+        // Usamos el componente 'mindar-image-target' y sus eventos: targetFound / targetLost
+        const sceneEl = document.querySelector('a-scene');
+        const unityFrame = document.getElementById('unityFrame');
+        // Esperar que A-Frame esté listo
+        sceneEl.addEventListener('renderstart', () => {
+          // buscar el entity target
+          const targetEntity = document.querySelector('[mindar-image-target]');
+          if (!targetEntity) return;
+
+          // targetFound y targetLost son eventos emitidos por mindar-image-target
+          targetEntity.addEventListener('targetFound', (e) => {
+            // Mostrar iframe (puedes ajustar transform/scale para que quede en la posición correcta)
+            unityFrame.style.display = 'block';
+          });
+
+          targetEntity.addEventListener('targetLost', (e) => {
+            unityFrame.style.display = 'none';
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>
