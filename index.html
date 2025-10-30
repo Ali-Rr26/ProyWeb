@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Unity + AR | My Project</title>
+
+    <!-- A-Frame + MindAR -->
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar-image-aframe.prod.js"></script>
+
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #231F20;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+      }
+
+      iframe {
+        width: 100%;
+        max-width: 960px;
+        height: 70vh;
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      }
+
+      button {
+        background-color: #00bfff;
+        color: white;
+        font-size: 1.2em;
+        font-weight: bold;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 10px;
+        margin-top: 20px;
+        cursor: pointer;
+        transition: background 0.3s ease;
+      }
+
+      button:hover {
+        background-color: #0090cc;
+      }
+
+      /* Contenedor AR */
+      #ar-container {
+        display: none;
+        width: 100%;
+        height: 100%;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 10;
+        background: black;
+      }
+
+      #close-ar {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: red;
+        color: white;
+        padding: 10px 15px;
+        border: none;
+        border-radius: 6px;
+        font-size: 16px;
+        cursor: pointer;
+        z-index: 20;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Vista normal de Unity -->
+    <iframe src="./index_unity.html" allowfullscreen></iframe>
+
+    <button id="ar-button">🎯 Activar modo AR</button>
+
+    <!-- Contenedor de AR oculto -->
+    <div id="ar-container">
+      <button id="close-ar">✖ Cerrar AR</button>
+
+      <a-scene
+        mindar-image="imageTargetSrc: ./targets.mind;"
+        color-space="sRGB"
+        renderer="colorManagement: true;"
+        vr-mode-ui="enabled: false"
+        device-orientation-permission-ui="enabled: false"
+      >
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+        <a-entity mindar-image-target="targetIndex: 0">
+          <iframe
+            src="./index_unity.html"
+            width="960"
+            height="600"
+            style="border:none; transform: scale(0.01) translate(-300, 0);"
+          ></iframe>
+        </a-entity>
+      </a-scene>
+    </div>
+
+    <script>
+      const arButton = document.getElementById("ar-button");
+      const arContainer = document.getElementById("ar-container");
+      const closeAR = document.getElementById("close-ar");
+
+      arButton.addEventListener("click", async () => {
+        try {
+          await navigator.mediaDevices.getUserMedia({ video: true });
+          arContainer.style.display = "block";
+          arButton.style.display = "none";
+        } catch (e) {
+          alert("Tu dispositivo no permite acceso a la cámara o no es compatible con AR.");
+        }
+      });
+
+      closeAR.addEventListener("click", () => {
+        arContainer.style.display = "none";
+        arButton.style.display = "inline-block";
+      });
+    </script>
+  </body>
+</html>
